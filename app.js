@@ -113,15 +113,27 @@ startBtn.addEventListener('click', async () => {
     try {
         // Try to get stream immediately
         log('Requesting camera stream...');
-        const stream = await navigator.mediaDevices.getUserMedia({
-            audio: false,
-            video: { facingMode: 'environment' }
-        }).catch(e => {
-            log(`Rear camera failed: ${e.name}. Trying fallback...`);
-            return navigator.mediaDevices.getUserMedia({ audio: false, video: true });
-        });
+        let stream;
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                audio: false,
+                video: { facingMode: 'environment' }
+            });
+        } catch (e) {
+            log(`Rear camera failed: ${e.name} - ${e.message}. Trying fallback...`);
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+            } catch (e2) {
+                log(`Fallback camera failed: ${e2.name} - ${e2.message}`);
+                throw e2;
+            }
+        }
         
-        log('Stream acquired!');
+        if (!stream) {
+            throw new Error('Stream is null or undefined');
+        }
+
+        log(`Stream acquired! ID: ${stream.id}`);
         video.srcObject = stream;
         
         // Now update UI
