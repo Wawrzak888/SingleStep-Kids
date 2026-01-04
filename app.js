@@ -31,6 +31,9 @@ const messageBox = document.getElementById('message-box');
 const messageText = document.getElementById('message-text');
 const actionBtn = document.getElementById('action-btn');
 const installBtn = document.getElementById('install-btn');
+const iosInstallBtn = document.getElementById('ios-install-btn');
+const iosModal = document.getElementById('ios-modal');
+const closeIosModalBtn = document.getElementById('close-ios-modal');
 const debugConsole = document.getElementById('debug-console');
 
 function log(msg) {
@@ -41,8 +44,34 @@ function log(msg) {
     }
 }
 
+// --- Platform Detection ---
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+function isStandalone() {
+    return (window.matchMedia('(display-mode: standalone)').matches) || (window.navigator.standalone) || document.referrer.includes('android-app://');
+}
+
 // --- PWA Installation Logic ---
 let deferredPrompt;
+
+// Check for iOS immediately
+if (isIOS() && !isStandalone()) {
+    if(iosInstallBtn) iosInstallBtn.classList.remove('hidden');
+}
+
+if(iosInstallBtn) {
+    iosInstallBtn.addEventListener('click', () => {
+        iosModal.classList.remove('hidden');
+    });
+}
+
+if(closeIosModalBtn) {
+    closeIosModalBtn.addEventListener('click', () => {
+        iosModal.classList.add('hidden');
+    });
+}
 
 window.addEventListener('beforeinstallprompt', (e) => {
     log('PWA: beforeinstallprompt fired');
@@ -143,13 +172,23 @@ startBtn.addEventListener('click', async () => {
         
         await new Promise((resolve) => {
             video.onloadedmetadata = () => {
+                log(`Video Meta: ${video.videoWidth}x${video.videoHeight}`);
+                // Force dimensions to prevent white screen on some devices
+                if (video.videoWidth) {
+                    video.width = video.videoWidth;
+                    video.height = video.videoHeight;
+                }
+                
                 video.play().then(() => {
                     resizeCanvas();
-                    log('Video playing');
+                    log('Video playing state: ' + !video.paused);
                     resolve();
                 }).catch(e => {
                     log(`Play error: ${e.message}`);
                     showDebugError(`Play error: ${e.message}`);
+                    // Try playing muted again if failed (autoplay policy)
+                    video.muted = true;
+                    video.play();
                 });
             };
         });
@@ -208,7 +247,12 @@ window.addEventListener('resize', () => {
 
 // --- Game Logic ---
 function startGame() {
+    log('Starting game loop...');
     gameUI.classList.remove('hidden');
+    // Force video visibility
+    video.style.display = 'block';
+    video.style.opacity = '1';
+    
     isDetecting = true;
     speak("Cześć! Poszukajmy bałaganu do posprzątania. Rozejrzyj się!");
     detectLoop();

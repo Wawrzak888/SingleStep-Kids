@@ -54,8 +54,13 @@
             START! 🚀
         </button>
         <!-- Custom Install Button (Hidden by default) -->
-        <button id="install-btn" class="hidden bg-indigo-500 hover:bg-indigo-600 text-white text-xl font-bold py-3 px-8 rounded-full shadow-lg transform transition active:scale-95">
+        <button id="install-btn" class="hidden bg-indigo-500 hover:bg-indigo-600 text-white text-xl font-bold py-3 px-8 rounded-full shadow-lg transform transition active:scale-95 mb-4">
             📲 Zainstaluj aplikację
+        </button>
+
+        <!-- iOS Install Instruction Button (Hidden by default) -->
+        <button id="ios-install-btn" class="hidden bg-gray-200 hover:bg-gray-300 text-gray-800 text-lg font-bold py-2 px-6 rounded-full shadow mb-4">
+            🍏 Jak zainstalować na iPhone?
         </button>
         
         <!-- Debug Console (Visible for now) -->
@@ -102,6 +107,20 @@
 
     <!-- Audio Elements -->
     <!-- We will generate beeps/success sounds via Web Audio API or use small base64 strings in JS to avoid external assets dependency issues -->
+
+    <!-- iOS Install Modal -->
+    <div id="ios-modal" class="hidden fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full text-center">
+            <h3 class="text-2xl font-bold mb-4 text-gray-800">Instalacja na iOS</h3>
+            <p class="mb-4 text-gray-600">Aby zainstalować aplikację:</p>
+            <ol class="text-left text-gray-700 space-y-3 mb-6">
+                <li class="flex items-center"><span class="text-2xl mr-2">1️⃣</span> Kliknij przycisk "Udostępnij" <img src="https://img.icons8.com/ios-glyphs/30/000000/share-rounded.png" class="inline h-6 mx-1"> na dole przeglądarki Safari.</li>
+                <li class="flex items-center"><span class="text-2xl mr-2">2️⃣</span> Przewiń w dół i wybierz "Do ekranu początkowego" <img src="https://img.icons8.com/ios-glyphs/30/000000/plus-math.png" class="inline h-6 mx-1">.</li>
+                <li class="flex items-center"><span class="text-2xl mr-2">3️⃣</span> Kliknij "Dodaj" w prawym górnym rogu.</li>
+            </ol>
+            <button id="close-ios-modal" class="bg-indigo-500 text-white font-bold py-2 px-6 rounded-full">Rozumiem</button>
+        </div>
+    </div>
 
     <script src="app.js"></script>
     <script>
