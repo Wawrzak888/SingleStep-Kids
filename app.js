@@ -2,14 +2,20 @@
 // Senior Mobile Web Developer Edition
 
 // --- Constants ---
-const TARGET_OBJECTS = [
-    'bottle', 'cup', 'wine glass', 'bowl', 'backpack', 'handbag', 
-    'book', 'teddy bear', 'sports ball', 'remote', 'cell phone', 
-    'banana', 'apple', 'orange', 'sandwich'
-];
-const MIN_CONFIDENCE = 0.5; // Zmniejszono próg pewności, aby szybciej łapał obiekty
-const DETECTION_INTERVAL = 200; // Zmniejszono interwał (było 1500), aby detekcja była płynniejsza
+const MIN_CONFIDENCE = 0.4; // Jeszcze niższy próg (40%) - łatwiej coś znaleźć
+const DETECTION_INTERVAL = 200; 
 const MODEL_TIMEOUT = 10000;
+
+// --- Target Objects ---
+// Expanded list to catch more items
+const TARGET_OBJECTS = [
+    'bottle', 'cup', 'wine glass', 'bowl', 'spoon', 'fork', 'knife',
+    'backpack', 'handbag', 'suitcase', 'umbrella',
+    'book', 'teddy bear', 'sports ball', 'frisbee', 'skis', 'snowboard',
+    'remote', 'cell phone', 'keyboard', 'mouse', 'laptop', 'tv',
+    'banana', 'apple', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'sandwich',
+    'chair', 'couch', 'potted plant', 'bed', 'dining table', 'toilet', 'vase', 'clock'
+];
 
 // --- Performance Settings ---
 // Używamy mniejszego modelu bazowego 'lite_mobilenet_v2' dla szybkości na mobile
@@ -403,9 +409,16 @@ async function detectLoop() {
         // Jednak `cocoSsd` robi to wewnętrznie. Największy zysk to użycie `lite_mobilenet_v2` (zrobione wyżej).
         
         // Wykrywanie obiektów
-        const predictions = await model.detect(video, undefined, 0.4); // maxNumBoxes=undefined, minScore=0.4 (wstępny filtr wewnątrz modelu)
+        const predictions = await model.detect(video, undefined, 0.3); // Pre-filter na poziomie modelu (30%)
         
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // DEBUG: Pokaż co widzi AI (wszystko > 30%)
+        const debugOverlay = document.getElementById('debug-overlay');
+        if (debugOverlay) {
+             const allSeen = predictions.map(p => `${p.class} (${Math.round(p.score*100)}%)`).join(', ');
+             debugOverlay.innerHTML += `<br>AI Sees: ${allSeen || 'Nothing'}`;
+        }
 
         const relevantPredictions = predictions.filter(p => 
             TARGET_OBJECTS.includes(p.class) && p.score > MIN_CONFIDENCE
@@ -513,10 +526,13 @@ function speak(text) {
 function translateClass(className) {
     const dict = {
         'bottle': 'butelka', 'cup': 'kubek', 'wine glass': 'kieliszek', 
-        'bowl': 'miska', 'backpack': 'plecak', 'handbag': 'torebka', 
-        'book': 'książka', 'teddy bear': 'miś', 'sports ball': 'piłka', 
-        'remote': 'pilot', 'cell phone': 'telefon', 'banana': 'banan', 
-        'apple': 'jabłko', 'orange': 'pomarańcza', 'sandwich': 'kanapka'
+        'bowl': 'miska', 'spoon': 'łyżka', 'fork': 'widelec', 'knife': 'nóż',
+        'backpack': 'plecak', 'handbag': 'torebka', 'suitcase': 'walizka', 'umbrella': 'parasol',
+        'book': 'książka', 'teddy bear': 'miś', 'sports ball': 'piłka', 'frisbee': 'frisbee',
+        'remote': 'pilot', 'cell phone': 'telefon', 'keyboard': 'klawiatura', 'mouse': 'myszka', 'laptop': 'laptop', 'tv': 'telewizor',
+        'banana': 'banan', 'apple': 'jabłko', 'orange': 'pomarańcza', 'broccoli': 'brokuł', 'carrot': 'marchewka', 
+        'hot dog': 'hot dog', 'pizza': 'pizza', 'donut': 'pączek', 'cake': 'ciasto', 'sandwich': 'kanapka',
+        'chair': 'krzesło', 'couch': 'kanapa', 'potted plant': 'kwiatek', 'bed': 'łóżko', 'dining table': 'stół', 'toilet': 'toaleta', 'vase': 'wazon', 'clock': 'zegar'
     };
     return dict[className] || className;
 }
