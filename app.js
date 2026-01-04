@@ -18,14 +18,14 @@ const TARGET_OBJECTS = [
 ];
 
 // --- Performance Settings ---
-// Używamy mniejszego modelu bazowego 'lite_mobilenet_v2' dla szybkości na mobile
+// Wracamy do pełnego modelu 'mobilenet_v2' dla lepszej dokładności (zamiast 'lite')
+// Mimo że 'lite' jest szybszy, okazał się zbyt mało precyzyjny ("ślepy").
 const MODEL_CONFIG = {
-    base: 'lite_mobilenet_v2', 
+    base: 'mobilenet_v2', 
     modelUrl: undefined // default
 };
-// Skalowanie obrazu dla AI (nie wpływa na widok z kamery, tylko na to co widzi AI)
-// Mniejsza rozdzielczość = szybsza analiza
-const AI_RESOLUTION_FACTOR = 0.5; 
+// Zwiększamy rozdzielczość dla AI, aby widziało detale (z 0.5 na 0.8)
+const AI_RESOLUTION_FACTOR = 0.8; 
 
 // --- State ---
 let model = null;
@@ -248,6 +248,14 @@ async function init() {
     checkEnvironment();
     updateLoadingProgress(10);
     log("Init started...");
+    
+    // Explicitly set backend to WebGL for performance with larger model
+    try {
+        await tf.setBackend('webgl');
+        log(`TF Backend: ${tf.getBackend()}`);
+    } catch(e) {
+        log("WebGL not available, using CPU/WASM");
+    }
 
     // Rozpocznij ładowanie modelu w tle, ale nie czekaj na niego
     log("Starting background model loading...");
