@@ -35,6 +35,21 @@
 </head>
 <body class="bg-indigo-50 text-gray-800 font-['Fredoka'] overflow-hidden select-none touch-none">
 
+    <!-- HTTPS Warning -->
+    <div id="https-warning" class="hidden fixed top-0 left-0 w-full bg-red-600 text-white text-center p-2 z-[60] font-bold text-sm">
+        ⚠️ Kamera i Instalacja wymagają bezpiecznego połączenia (HTTPS).
+    </div>
+
+    <!-- Error Modal (User Facing) -->
+    <div id="error-modal" class="hidden fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-6 text-center">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full">
+            <div class="text-5xl mb-4">⚠️</div>
+            <h3 class="text-xl font-bold mb-2 text-red-600">Wystąpił problem</h3>
+            <p id="error-text" class="text-gray-700 mb-6">Nieznany błąd.</p>
+            <button onclick="location.reload()" class="bg-indigo-500 text-white font-bold py-3 px-8 rounded-full w-full">Spróbuj ponownie</button>
+        </div>
+    </div>
+
     <!-- Loading Screen -->
     <div id="loading-screen" class="fixed inset-0 z-50 bg-indigo-600 flex flex-col items-center justify-center text-white transition-opacity duration-500">
         <div class="text-6xl mb-4 animate-bounce">🪄</div>
@@ -50,22 +65,21 @@
         <div class="text-6xl mb-6">📸</div>
         <h2 class="text-3xl font-bold mb-4 text-indigo-800">Potrzebuję Twoich oczu!</h2>
         <p class="text-xl mb-8">Aby szukać skarbów, muszę widzieć Twój pokój.</p>
-        <button id="start-btn" class="bg-green-500 hover:bg-green-600 text-white text-2xl font-bold py-4 px-12 rounded-full shadow-lg transform transition active:scale-95 border-b-8 border-green-700 mb-4">
+        
+        <button id="start-btn" class="bg-green-500 hover:bg-green-600 text-white text-2xl font-bold py-4 px-12 rounded-full shadow-lg transform transition active:scale-95 border-b-8 border-green-700 mb-6">
             START! 🚀
         </button>
-        <!-- Custom Install Button (Hidden by default) -->
-        <button id="install-btn" class="hidden bg-indigo-500 hover:bg-indigo-600 text-white text-xl font-bold py-3 px-8 rounded-full shadow-lg transform transition active:scale-95 mb-4">
-            📲 Zainstaluj aplikację
-        </button>
 
-        <!-- iOS Install Instruction Button (Hidden by default) -->
-        <button id="ios-install-btn" class="hidden bg-gray-200 hover:bg-gray-300 text-gray-800 text-lg font-bold py-2 px-6 rounded-full shadow mb-4">
-            🍏 Jak zainstalować na iPhone?
+        <!-- PWA Install Button -->
+        <button id="install-btn" class="hidden bg-indigo-500 hover:bg-indigo-600 text-white text-lg font-bold py-3 px-8 rounded-full shadow-lg transform transition active:scale-95 flex items-center gap-2">
+            <span>📲</span> Zainstaluj aplikację
         </button>
         
-        <!-- Debug Console (Visible for now) -->
-        <div id="debug-console" class="mt-4 p-2 bg-black/80 text-green-400 text-xs font-mono w-full max-h-32 overflow-y-auto rounded text-left">
-            > Ready.
+        <!-- iOS Hint -->
+        <div id="ios-hint" class="hidden mt-6 bg-white p-4 rounded-xl shadow-md max-w-xs text-sm text-left">
+            <p class="font-bold mb-2">🍏 Na iPhone:</p>
+            <p>1. Kliknij "Udostępnij" <img src="https://img.icons8.com/ios-glyphs/30/000000/share-rounded.png" class="inline h-4"> na dole.</p>
+            <p>2. Wybierz "Do ekranu początkowego" <img src="https://img.icons8.com/ios-glyphs/30/000000/plus-math.png" class="inline h-4">.</p>
         </div>
     </div>
 
@@ -73,7 +87,8 @@
     <div id="game-ui" class="relative w-full h-full hidden">
         
         <!-- Camera View -->
-        <video id="webcam" class="absolute inset-0 w-full h-full object-cover z-0" playsinline muted autoplay></video>
+        <!-- CRITICAL: playsinline, webkit-playsinline for iOS -->
+        <video id="webcam" class="absolute inset-0 w-full h-full object-cover z-0" autoplay muted playsinline webkit-playsinline></video>
         
         <!-- AR Overlay Canvas -->
         <canvas id="canvas" class="absolute inset-0 w-full h-full z-10 pointer-events-none"></canvas>
@@ -102,23 +117,6 @@
             <button id="action-btn" class="hidden w-full max-w-xs bg-green-500 hover:bg-green-600 text-white text-3xl font-black py-6 rounded-3xl shadow-[0_8px_0_rgb(21,128,61)] active:shadow-none active:translate-y-2 transition-all border-4 border-green-400 animate-bounce">
                 ZROBIONE! ✅
             </button>
-        </div>
-    </div>
-
-    <!-- Audio Elements -->
-    <!-- We will generate beeps/success sounds via Web Audio API or use small base64 strings in JS to avoid external assets dependency issues -->
-
-    <!-- iOS Install Modal -->
-    <div id="ios-modal" class="hidden fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl p-6 max-w-sm w-full text-center">
-            <h3 class="text-2xl font-bold mb-4 text-gray-800">Instalacja na iOS</h3>
-            <p class="mb-4 text-gray-600">Aby zainstalować aplikację:</p>
-            <ol class="text-left text-gray-700 space-y-3 mb-6">
-                <li class="flex items-center"><span class="text-2xl mr-2">1️⃣</span> Kliknij przycisk "Udostępnij" <img src="https://img.icons8.com/ios-glyphs/30/000000/share-rounded.png" class="inline h-6 mx-1"> na dole przeglądarki Safari.</li>
-                <li class="flex items-center"><span class="text-2xl mr-2">2️⃣</span> Przewiń w dół i wybierz "Do ekranu początkowego" <img src="https://img.icons8.com/ios-glyphs/30/000000/plus-math.png" class="inline h-6 mx-1">.</li>
-                <li class="flex items-center"><span class="text-2xl mr-2">3️⃣</span> Kliknij "Dodaj" w prawym górnym rogu.</li>
-            </ol>
-            <button id="close-ios-modal" class="bg-indigo-500 text-white font-bold py-2 px-6 rounded-full">Rozumiem</button>
         </div>
     </div>
 
