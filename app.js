@@ -8,10 +8,12 @@ const TARGET_OBJECTS = [
     'banana', 'apple', 'orange', 'sandwich'
 ];
 const MIN_CONFIDENCE = 0.6;
-const DETECTION_INTERVAL = 500; // ms
+const DETECTION_INTERVAL = 1500; // ms - ZWIĘKSZONO dla wydajności
+const MODEL_TIMEOUT = 10000; // 10s timeout na model
 
 // --- State ---
 let model = null;
+let modelLoadingPromise = null; // Promise ładowania modelu
 let video = document.getElementById('webcam');
 let canvas = document.getElementById('canvas');
 let ctx = canvas ? canvas.getContext('2d') : null;
@@ -184,9 +186,11 @@ async function startCamera() {
         video.onloadedmetadata = () => {
             log(`Video metadata loaded: ${video.videoWidth}x${video.videoHeight}`);
             
-            // Force dimensions
-            video.width = video.videoWidth;
-            video.height = video.videoHeight;
+            // NIE ustawiamy sztywno video.width/height, aby CSS (object-cover) działał poprawnie
+            // video.width = video.videoWidth; 
+            // video.height = video.videoHeight;
+            
+            // Canvas musi pasować do rozdzielczości wideo dla poprawnego rysowania ramek
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
 
@@ -216,19 +220,38 @@ async function init() {
     updateLoadingProgress(10);
     log("Init started...");
 
+    // Rozpocznij ładowanie modelu w tle, ale nie czekaj na niego
+    log("Starting background model loading...");
+    modelLoadingPromise = loadModelWithTimeout();
+
+    // Pokaż ekran startowy natychmiast (nie blokuj UI modelem)
+    loadingScreen.classList.add('hidden');
+    permissionScreen.classList.remove('hidden');
+}
+
+async function loadModelWithTimeout() {
     try {
-        // Load AI Model
-        model = await cocoSsd.load();
-        updateLoadingProgress(50);
-        log("AI Model loaded");
+        // Wyścig: Model vs Timeout
+        const loadPromise = cocoSsd.load({ base: 'lite_mobilenet_v2' }); // Wymuś wersję lite
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Timeout")), MODEL_TIMEOUT)
+        );
 
-        // Show Start Screen
-        loadingScreen.classList.add('hidden');
-        permissionScreen.classList.remove('hidden');
-
+        model = await Promise.race([loadPromise, timeoutPromise]);
+        log("AI Model loaded successfully (Background)");
+        if (isDetecting) {
+            statusBadge.innerText = "🔍 Szukam...";
+            statusBadge.classList.remove('bg-gray-400');
+            statusBadge.classList.add('bg-yellow-400', 'animate-pulse');
+        }
+        return model;
     } catch (err) {
-        log(`AI Load Error: ${err.message}`);
-        showError("Nie udało się załadować AI. Odśwież stronę.");
+        log(`AI Model Load Failed: ${err.message}`);
+        if (isDetecting) {
+            statusBadge.innerText = "⚠️ Brak AI";
+            statusBadge.className = "bg-red-500 text-white px-4 py-2 rounded-full font-bold shadow-lg";
+        }
+        return null;
     }
 }
 
@@ -237,7 +260,8 @@ startBtn.addEventListener('click', async () => {
     // User gesture starts here
     permissionScreen.classList.add('hidden');
     loadingScreen.classList.remove('hidden');
-    updateLoadingProgress(60);
+    loadingText.innerText = "Uruchamiam kamerę..."; // Zmiana tekstu
+    updateLoadingProgress(30);
 
     try {
         await startCamera();
