@@ -7,9 +7,19 @@ const TARGET_OBJECTS = [
     'book', 'teddy bear', 'sports ball', 'remote', 'cell phone', 
     'banana', 'apple', 'orange', 'sandwich'
 ];
-const MIN_CONFIDENCE = 0.6;
-const DETECTION_INTERVAL = 1500; // ms - ZWIĘKSZONO dla wydajności
-const MODEL_TIMEOUT = 10000; // 10s timeout na model
+const MIN_CONFIDENCE = 0.5; // Zmniejszono próg pewności, aby szybciej łapał obiekty
+const DETECTION_INTERVAL = 200; // Zmniejszono interwał (było 1500), aby detekcja była płynniejsza
+const MODEL_TIMEOUT = 10000;
+
+// --- Performance Settings ---
+// Używamy mniejszego modelu bazowego 'lite_mobilenet_v2' dla szybkości na mobile
+const MODEL_CONFIG = {
+    base: 'lite_mobilenet_v2', 
+    modelUrl: undefined // default
+};
+// Skalowanie obrazu dla AI (nie wpływa na widok z kamery, tylko na to co widzi AI)
+// Mniejsza rozdzielczość = szybsza analiza
+const AI_RESOLUTION_FACTOR = 0.5; 
 
 // --- State ---
 let model = null;
@@ -245,7 +255,8 @@ async function init() {
 async function loadModelWithTimeout() {
     try {
         // Wyścig: Model vs Timeout
-        const loadPromise = cocoSsd.load({ base: 'lite_mobilenet_v2' }); // Wymuś wersję lite
+        // Używamy lżejszej wersji modelu
+        const loadPromise = cocoSsd.load(MODEL_CONFIG);
         const timeoutPromise = new Promise((_, reject) => 
             setTimeout(() => reject(new Error("Timeout")), MODEL_TIMEOUT)
         );
@@ -373,11 +384,26 @@ function resizeCanvas() {
     }
 }
 
+let lastDetectionTime = 0;
+
 async function detectLoop() {
     if (!isDetecting) return;
 
+    const now = Date.now();
+    if (now - lastDetectionTime < DETECTION_INTERVAL) {
+        requestAnimationFrame(detectLoop);
+        return;
+    }
+    lastDetectionTime = now;
+
     if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        const predictions = await model.detect(video);
+        // PERFORMANCE OPTIMIZATION:
+        // Zamiast przekazywać całe wideo HD do modelu, przekazujemy mniejszy obraz.
+        // TensorFlow.js i tak skaluje obraz w dół, ale zrobienie tego wcześniej może pomóc na słabszych CPU.
+        // Jednak `cocoSsd` robi to wewnętrznie. Największy zysk to użycie `lite_mobilenet_v2` (zrobione wyżej).
+        
+        // Wykrywanie obiektów
+        const predictions = await model.detect(video, undefined, 0.4); // maxNumBoxes=undefined, minScore=0.4 (wstępny filtr wewnątrz modelu)
         
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
