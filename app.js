@@ -182,8 +182,14 @@ async function startCamera() {
     video.srcObject = stream;
     
     // Wait for metadata to load to ensure dimensions
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+        // Safety timeout for camera start
+        const camTimeout = setTimeout(() => {
+             reject(new Error("Camera start timeout (5s)"));
+        }, 5000);
+
         video.onloadedmetadata = () => {
+            clearTimeout(camTimeout);
             log(`Video metadata loaded: ${video.videoWidth}x${video.videoHeight}`);
             
             // NIE ustawiamy sztywno video.width/height, aby CSS (object-cover) działał poprawnie
@@ -207,9 +213,15 @@ async function startCamera() {
                          log("Video playing successfully (muted fallback)");
                          resolve();
                     }).catch(e2 => {
-                        showError(`Błąd odtwarzania wideo: ${e2.message}`);
+                        reject(new Error(`Błąd odtwarzania wideo: ${e2.message}`));
                     });
                 });
+        };
+        
+        // Handle stream errors
+        video.onerror = (e) => {
+             clearTimeout(camTimeout);
+             reject(new Error(`Video Element Error: ${video.error ? video.error.message : 'Unknown'}`));
         };
     });
 }
@@ -263,12 +275,42 @@ startBtn.addEventListener('click', async () => {
     loadingText.innerText = "Uruchamiam kamerę..."; // Zmiana tekstu
     updateLoadingProgress(30);
 
+    // --- STEP 1: CAMERA ---
+    log("Step 1: Starting Camera...");
     try {
         await startCamera();
+        log("Step 1: Camera OK ✅");
+        updateLoadingProgress(60);
+    } catch (err) {
+        console.error("Camera Start Error", err);
+        showError("Błąd kamery: " + err.message);
+        permissionScreen.classList.remove('hidden');
+        loadingScreen.classList.add('hidden');
+        return; // Stop here
+    }
+
+    // --- STEP 2: MODEL ---
+    log("Step 2: Waiting for AI Model...");
+    loadingText.innerText = "Budzę AI...";
+    try {
+        if (!model) {
+            log("Model not ready yet, waiting...");
+            // If background loading hasn't finished, await it now
+            if (modelLoadingPromise) {
+                model = await modelLoadingPromise;
+            } else {
+                 // Should not happen if init() ran, but safety net
+                 model = await loadModelWithTimeout();
+            }
+        }
         
+        if (!model) throw new Error("AI Model failed to load");
+        
+        log("Step 2: AI Model OK ✅");
         updateLoadingProgress(100);
-        
-        // Hide loader, show game
+
+        // --- STEP 3: GAME START ---
+        log("Step 3: Starting Game Loop...");
         setTimeout(() => {
             loadingScreen.classList.add('hidden');
             gameUI.classList.remove('hidden');
@@ -276,9 +318,12 @@ startBtn.addEventListener('click', async () => {
         }, 500);
 
     } catch (err) {
-        console.error("Start Error", err);
-        showError("Błąd podczas uruchamiania: " + err.message);
+        console.error("Model Wait Error", err);
+        showError("Błąd AI: " + err.message);
+        // Fallback: Start game without AI if critical? Or just show error?
+        // Let's show error for now as AI is core.
         permissionScreen.classList.remove('hidden');
+        loadingScreen.classList.add('hidden');
     }
 });
 
