@@ -420,4 +420,12 @@ function translateClass(className) {
 }
 
 // Start
-init();
+try {
+    init();
+} catch (e) {
+    console.error("Critical Init Error:", e);
+    // Fallback: remove loading screen anyway so user can try to interact or see error
+    if (loadingScreen) loadingScreen.classList.add('hidden');
+    if (permissionScreen) permissionScreen.classList.remove('hidden');
+    showError("Błąd inicjalizacji: " + e.message);
+}

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'singlestep-kids-v2';
+const CACHE_NAME = 'singlestep-kids-v3';
 const ASSETS = [
   './',
   './index.html',
