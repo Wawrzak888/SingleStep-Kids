@@ -36,15 +36,54 @@ const iosHint = document.getElementById('ios-hint');
 const httpsWarning = document.getElementById('https-warning');
 const errorModal = document.getElementById('error-modal');
 const errorText = document.getElementById('error-text');
+const diagnostics = document.getElementById('diagnostics');
+const diagHttps = document.getElementById('diag-https');
+const diagPerm = document.getElementById('diag-perm');
+const diagPwa = document.getElementById('diag-pwa');
+
+function log(msg) {
+    console.log(msg);
+    if (diagnostics) {
+        const line = document.createElement('div');
+        line.innerText = `> ${msg}`;
+        diagnostics.appendChild(line);
+        diagnostics.scrollTop = diagnostics.scrollHeight;
+    }
+}
 
 // --- 1. Environment Verification (HTTPS) ---
 function checkEnvironment() {
     const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
     const isHttps = location.protocol === 'https:';
 
+    if (diagHttps) {
+        diagHttps.innerText = `HTTPS: ${isHttps ? 'TAK ✅' : 'NIE ❌'} | Host: ${location.hostname}`;
+    }
+
     if (!isHttps && !isLocalhost) {
         httpsWarning.classList.remove('hidden');
-        console.error("HTTPS Required!");
+        log("CRITICAL: HTTPS REQUIRED!");
+    }
+
+    // Check Permissions API
+    if (navigator.permissions && navigator.permissions.query) {
+        navigator.permissions.query({ name: 'camera' })
+            .then(permissionStatus => {
+                if (diagPerm) diagPerm.innerText = `Uprawnienia: ${permissionStatus.state.toUpperCase()}`;
+                log(`Initial Permission State: ${permissionStatus.state}`);
+                
+                permissionStatus.onchange = () => {
+                    if (diagPerm) diagPerm.innerText = `Uprawnienia: ${permissionStatus.state.toUpperCase()}`;
+                    log(`Zmiana uprawnień: ${permissionStatus.state}`);
+                };
+            })
+            .catch(err => {
+                if (diagPerm) diagPerm.innerText = `Uprawnienia: Błąd API`;
+                log(`Permissions Query Error: ${err.message}`);
+            });
+    } else {
+        if (diagPerm) diagPerm.innerText = `Uprawnienia: API niedostępne (iOS/Old)`;
+        log('Permissions API not supported');
     }
 }
 
@@ -58,22 +97,23 @@ window.addEventListener('beforeinstallprompt', (e) => {
     if (installBtn) {
         installBtn.classList.remove('hidden');
     }
-    console.log("'beforeinstallprompt' event was fired.");
+    if (diagPwa) diagPwa.innerText = "PWA: Gotowe do instalacji ✅";
+    log("'beforeinstallprompt' event was fired.");
 });
 
 if (installBtn) {
-    installBtn.addEventListener('click', async () => {
-        if (!deferredPrompt) return;
-        // Show the install prompt
-        deferredPrompt.prompt();
-        // Wait for the user to respond to the prompt
-        const { outcome } = await deferredPrompt.userChoice;
-        console.log(`User response to the install prompt: ${outcome}`);
-        // We've used the prompt, and can't use it again, throw it away
-        deferredPrompt = null;
-        installBtn.classList.add('hidden');
-    });
-}
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            // Show the install prompt
+            deferredPrompt.prompt();
+            // Wait for the user to respond to the prompt
+            const { outcome } = await deferredPrompt.userChoice;
+            log(`User response to the install prompt: ${outcome}`);
+            // We've used the prompt, and can't use it again, throw it away
+            deferredPrompt = null;
+            installBtn.classList.add('hidden');
+        });
+    }
 
 // Check for iOS to show hint
 function isIOS() {
@@ -98,7 +138,7 @@ async function startCamera() {
     let stream = null;
 
     try {
-        console.log("Attempting to access rear camera (exact)...");
+        log("Attempting to access rear camera (exact)...");
         stream = await navigator.mediaDevices.getUserMedia({
             audio: false,
             video: { 
@@ -106,7 +146,7 @@ async function startCamera() {
             }
         });
     } catch (err) {
-        console.warn("Exact environment camera failed, trying loose mode...", err);
+        log(`Exact environment camera failed: ${err.name}. Trying loose mode...`);
         try {
             stream = await navigator.mediaDevices.getUserMedia({
                 audio: false,
@@ -115,14 +155,14 @@ async function startCamera() {
                 }
             });
         } catch (err2) {
-            console.warn("Environment camera failed, trying any video...", err2);
+            log(`Environment camera failed: ${err2.name}. Trying any video...`);
             try {
                 stream = await navigator.mediaDevices.getUserMedia({
                     audio: false,
                     video: true
                 });
             } catch (err3) {
-                console.error("All camera attempts failed", err3);
+                log(`All camera attempts failed: ${err3.name}`);
                 showError(`Nie udało się uruchomić kamery: ${err3.name}. Sprawdź uprawnienia.`);
                 return;
             }
@@ -134,13 +174,15 @@ async function startCamera() {
         return;
     }
 
+    log(`Stream acquired! ID: ${stream.id}`);
+
     // Attach stream to video
     video.srcObject = stream;
     
     // Wait for metadata to load to ensure dimensions
     return new Promise((resolve) => {
         video.onloadedmetadata = () => {
-            console.log(`Video metadata loaded: ${video.videoWidth}x${video.videoHeight}`);
+            log(`Video metadata loaded: ${video.videoWidth}x${video.videoHeight}`);
             
             // Force dimensions
             video.width = video.videoWidth;
@@ -150,14 +192,17 @@ async function startCamera() {
 
             video.play()
                 .then(() => {
-                    console.log("Video playing successfully");
+                    log("Video playing successfully");
                     resolve();
                 })
                 .catch(e => {
-                    console.error("Video play failed", e);
+                    log(`Video play failed: ${e.message}`);
                     // Try playing muted if failed (sometimes autoplay policy blocks unmuted)
                     video.muted = true;
-                    video.play().then(resolve).catch(e2 => {
+                    video.play().then(() => {
+                         log("Video playing successfully (muted fallback)");
+                         resolve();
+                    }).catch(e2 => {
                         showError(`Błąd odtwarzania wideo: ${e2.message}`);
                     });
                 });
@@ -169,19 +214,20 @@ async function startCamera() {
 async function init() {
     checkEnvironment();
     updateLoadingProgress(10);
+    log("Init started...");
 
     try {
         // Load AI Model
         model = await cocoSsd.load();
         updateLoadingProgress(50);
-        console.log("AI Model loaded");
+        log("AI Model loaded");
 
         // Show Start Screen
         loadingScreen.classList.add('hidden');
         permissionScreen.classList.remove('hidden');
 
     } catch (err) {
-        console.error("AI Load Error", err);
+        log(`AI Load Error: ${err.message}`);
         showError("Nie udało się załadować AI. Odśwież stronę.");
     }
 }
