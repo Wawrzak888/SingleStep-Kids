@@ -7,6 +7,11 @@
     <meta name="description" content="Gra w sprzątanie dla dzieci z wykorzystaniem AI">
     <meta name="theme-color" content="#4F46E5">
     
+    <!-- iOS Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SingleStep">
+    
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="https://img.icons8.com/color/96/cleaner.png">
@@ -45,8 +50,12 @@
         <div class="text-6xl mb-6">📸</div>
         <h2 class="text-3xl font-bold mb-4 text-indigo-800">Potrzebuję Twoich oczu!</h2>
         <p class="text-xl mb-8">Aby szukać skarbów, muszę widzieć Twój pokój.</p>
-        <button id="start-btn" class="bg-green-500 hover:bg-green-600 text-white text-2xl font-bold py-4 px-12 rounded-full shadow-lg transform transition active:scale-95 border-b-8 border-green-700">
+        <button id="start-btn" class="bg-green-500 hover:bg-green-600 text-white text-2xl font-bold py-4 px-12 rounded-full shadow-lg transform transition active:scale-95 border-b-8 border-green-700 mb-4">
             START! 🚀
+        </button>
+        <!-- Custom Install Button (Hidden by default) -->
+        <button id="install-btn" class="hidden bg-indigo-500 hover:bg-indigo-600 text-white text-xl font-bold py-3 px-8 rounded-full shadow-lg transform transition active:scale-95">
+            📲 Zainstaluj aplikację
         </button>
     </div>
 

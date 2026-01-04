@@ -1,0 +1,58 @@
+📄 Wzór Polecenia (Prompt) do wdrożenia PWA
+Role: Senior Frontend Developer & PWA Specialist
+
+Task: Convert the current static HTML website into a fully installable Progressive Web App (PWA) with a custom installation UI flow.
+
+Requirements:
+
+File Structure: Split the project into 3 essential files:
+
+index.html (Main application logic)
+
+manifest.json (App metadata and configuration)
+
+sw.js (Service Worker for offline capability and installation criteria)
+
+Manifest Configuration (manifest.json):
+
+Define name, short_name, theme_color, and background_color.
+
+Set display: "standalone" to hide the browser address bar.
+
+Include placeholders for icons (192x192 and 512x512).
+
+Service Worker (sw.js):
+
+Create a basic caching strategy (Cache-First or Stale-While-Revalidate) to satisfy the browser's PWA installability criteria.
+
+Ensure it caches the main files (index.html, manifest.json).
+
+HTML & JavaScript Logic (index.html):
+
+Meta Tags: Add iOS specific meta tags (apple-mobile-web-app-capable, apple-mobile-web-app-status-bar-style).
+
+SW Registration: Register the service worker on window load.
+
+Custom Install UI Pattern (CRITICAL):
+
+Create a styled "Install App" button/banner in HTML but set it to display: none (hidden) by default.
+
+Listen for the beforeinstallprompt event.
+
+Logic: When the event fires:
+
+Prevent the default browser mini-infobar (e.preventDefault()).
+
+Save the event to a variable (deferredPrompt).
+
+Unhide the custom "Install App" button (change display to block/flex).
+
+Click Handler: When the user clicks your custom button:
+
+Call deferredPrompt.prompt() to show the native install dialog.
+
+Log the user's choice.
+
+Hide the custom button again.
+
+Goal: The user should see a custom, integrated "Install Application" button only if their device supports it, providing a native-app-like experience.
