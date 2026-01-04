@@ -9,9 +9,9 @@ const DETECTION_INTERVAL = 500; // ms
 
 // --- State ---
 let model = null;
-let video = null;
-let canvas = null;
-let ctx = null;
+let video = document.getElementById('webcam');
+let canvas = document.getElementById('canvas');
+let ctx = canvas ? canvas.getContext('2d') : null;
 let isDetecting = false;
 let foundObject = null; // The object currently "locked on"
 let score = 0;
