@@ -31,27 +31,43 @@ const messageBox = document.getElementById('message-box');
 const messageText = document.getElementById('message-text');
 const actionBtn = document.getElementById('action-btn');
 const installBtn = document.getElementById('install-btn');
+const debugConsole = document.getElementById('debug-console');
+
+function log(msg) {
+    console.log(msg);
+    if(debugConsole) {
+        debugConsole.innerHTML += `<div>> ${msg}</div>`;
+        debugConsole.scrollTop = debugConsole.scrollHeight;
+    }
+}
 
 // --- PWA Installation Logic ---
 let deferredPrompt;
 
 window.addEventListener('beforeinstallprompt', (e) => {
+    log('PWA: beforeinstallprompt fired');
     // Prevent the mini-infobar from appearing on mobile
     e.preventDefault();
     // Stash the event so it can be triggered later.
     deferredPrompt = e;
     // Update UI notify the user they can install the PWA
-    if(installBtn) installBtn.classList.remove('hidden');
+    if(installBtn) {
+        installBtn.classList.remove('hidden');
+        log('PWA: Install button shown');
+    }
 });
 
 if(installBtn) {
     installBtn.addEventListener('click', async () => {
-        if (!deferredPrompt) return;
+        if (!deferredPrompt) {
+            log('PWA: No deferredPrompt available');
+            return;
+        }
         // Show the install prompt
         deferredPrompt.prompt();
         // Wait for the user to respond to the prompt
         const { outcome } = await deferredPrompt.userChoice;
-        console.log(`User response to the install prompt: ${outcome}`);
+        log(`PWA: User response: ${outcome}`);
         // We've used the prompt, and can't use it again, throw it away
         deferredPrompt = null;
         installBtn.classList.add('hidden');
@@ -60,18 +76,22 @@ if(installBtn) {
 
 // --- Initialization ---
 async function init() {
+    log('Init started');
     updateLoadingProgress(10, 'Rozgrzewam silniki AI...');
     
     try {
         // Load COCO-SSD Model
         model = await cocoSsd.load();
+        log('AI Model loaded');
         updateLoadingProgress(50, 'Model AI załadowany!');
         
         // Show Permission Screen
         loadingScreen.classList.add('hidden');
         permissionScreen.classList.remove('hidden');
+        log('Waiting for user start...');
         
     } catch (err) {
+        log(`AI Error: ${err.message}`);
         console.error('Failed to load model', err);
         alert('Błąd ładowania AI. Spróbuj odświeżyć stronę.');
     }
@@ -79,12 +99,49 @@ async function init() {
 
 // Start Button Handler
 startBtn.addEventListener('click', async () => {
+    log('Start button clicked');
+    // Call getUserMedia IMMEDIATELY to preserve user gesture
+    // We do this before any await or UI updates
+    
+    // Check if getUserMedia is supported
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        log('API Error: navigator.mediaDevices.getUserMedia not available');
+        alert('Twoja przeglądarka nie obsługuje kamery (lub brak HTTPS).');
+        return;
+    }
+
     try {
+        // Try to get stream immediately
+        log('Requesting camera stream...');
+        const stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: { facingMode: 'environment' }
+        }).catch(e => {
+            log(`Rear camera failed: ${e.name}. Trying fallback...`);
+            return navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+        });
+        
+        log('Stream acquired!');
+        video.srcObject = stream;
+        
+        // Now update UI
         permissionScreen.classList.add('hidden');
         loadingScreen.classList.remove('hidden');
         updateLoadingProgress(60, 'Łączę z kamerą...');
         
-        await setupCamera();
+        await new Promise((resolve) => {
+            video.onloadedmetadata = () => {
+                video.play().then(() => {
+                    resizeCanvas();
+                    log('Video playing');
+                    resolve();
+                }).catch(e => {
+                    log(`Play error: ${e.message}`);
+                    showDebugError(`Play error: ${e.message}`);
+                });
+            };
+        });
+        
         updateLoadingProgress(100, 'Gotowe!');
         
         setTimeout(() => {
@@ -96,66 +153,20 @@ startBtn.addEventListener('click', async () => {
         }, 500);
         
     } catch (err) {
+        log(`Camera Error: ${err.name} - ${err.message}`);
         console.error('Camera error', err);
-        let msg = 'Nie udało się uruchomić kamery.';
-        if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-            msg += ' Wymagane jest bezpieczne połączenie HTTPS (lub localhost).';
-        } else {
-            msg += ' Sprawdź uprawnienia w przeglądarce.';
+        let msg = `Błąd kamery: ${err.name}.`;
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+            msg += ' (Brak HTTPS?)';
         }
         alert(msg);
         permissionScreen.classList.remove('hidden');
     }
 });
 
-// --- Camera Setup ---
-async function setupCamera() {
-    video = document.getElementById('webcam');
-    canvas = document.getElementById('canvas');
-    ctx = canvas.getContext('2d');
+// Remove old setupCamera function as we integrated it into click handler
+// function setupCamera() { ... } 
 
-    // Check if getUserMedia is supported
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Browser API navigator.mediaDevices.getUserMedia not available');
-    }
-
-    try {
-        // First try: preferred settings (Rear camera)
-        const stream = await navigator.mediaDevices.getUserMedia({
-            audio: false,
-            video: {
-                facingMode: 'environment'
-            }
-        });
-        video.srcObject = stream;
-    } catch (e) {
-        console.warn("Camera init failed with environment facingMode, trying fallback...", e);
-        showDebugError(`Błąd kamery tylnej: ${e.name} - ${e.message}. Próbuję innej...`);
-        
-        try {
-            // Second try: any camera
-            const stream = await navigator.mediaDevices.getUserMedia({
-                audio: false,
-                video: true
-            });
-            video.srcObject = stream;
-        } catch (e2) {
-            showDebugError(`Krytyczny błąd kamery: ${e2.name} - ${e2.message}`);
-            throw e2;
-        }
-    }
-    
-    return new Promise((resolve) => {
-        video.onloadedmetadata = () => {
-            video.play().then(() => {
-                resizeCanvas();
-                resolve();
-            }).catch(e => {
-                 showDebugError(`Błąd odtwarzania wideo: ${e.name} - ${e.message}`);
-            });
-        };
-    });
-}
 
 function showDebugError(msg) {
     // Optional: display error on screen for mobile debugging
