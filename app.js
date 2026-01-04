@@ -343,6 +343,27 @@ function startGame() {
     speak("Cześć! Poszukajmy bałaganu. Rozejrzyj się!");
     detectLoop();
     window.addEventListener('resize', resizeCanvas);
+
+    // DEBUG: Monitor Video State
+    setInterval(() => {
+        const dbg = document.getElementById('debug-overlay');
+        if (dbg && video) {
+            const stream = video.srcObject;
+            const track = stream ? stream.getVideoTracks()[0] : null;
+            const settings = track ? JSON.stringify(track.getSettings()) : 'No Track';
+            
+            dbg.innerHTML = `
+                Res: ${video.videoWidth}x${video.videoHeight}<br>
+                State: ${video.readyState}<br>
+                Paused: ${video.paused}<br>
+                Muted: ${video.muted}<br>
+                Stream: ${stream ? (stream.active ? 'Active' : 'Inactive') : 'Null'}<br>
+                Track: ${track ? track.label : 'None'}<br>
+                FPS: ${Math.round(1000/DETECTION_INTERVAL)}<br>
+                Canvas: ${canvas.width}x${canvas.height}
+            `;
+        }
+    }, 500);
 }
 
 function resizeCanvas() {
