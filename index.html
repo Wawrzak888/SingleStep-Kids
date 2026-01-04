@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SingleStep Kids</title>
+    <meta name="description" content="Gra w sprzątanie dla dzieci z wykorzystaniem AI">
+    <meta name="theme-color" content="#4F46E5">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="https://img.icons8.com/color/96/cleaner.png">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Libraries -->
+    <!-- TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <!-- COCO-SSD Model -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+</head>
+<body class="bg-indigo-50 text-gray-800 font-['Fredoka'] overflow-hidden select-none touch-none">
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="fixed inset-0 z-50 bg-indigo-600 flex flex-col items-center justify-center text-white transition-opacity duration-500">
+        <div class="text-6xl mb-4 animate-bounce">🪄</div>
+        <h1 class="text-3xl font-bold mb-2">SingleStep Kids</h1>
+        <p id="loading-text" class="text-xl opacity-90">Uzbrajanie magicznej różdżki...</p>
+        <div class="mt-8 w-64 h-4 bg-indigo-800 rounded-full overflow-hidden">
+            <div id="loading-bar" class="h-full bg-yellow-400 w-0 transition-all duration-300"></div>
+        </div>
+    </div>
+
+    <!-- Permission Screen (hidden by default) -->
+    <div id="permission-screen" class="hidden fixed inset-0 z-40 bg-indigo-100 flex flex-col items-center justify-center p-6 text-center">
+        <div class="text-6xl mb-6">📸</div>
+        <h2 class="text-3xl font-bold mb-4 text-indigo-800">Potrzebuję Twoich oczu!</h2>
+        <p class="text-xl mb-8">Aby szukać skarbów, muszę widzieć Twój pokój.</p>
+        <button id="start-btn" class="bg-green-500 hover:bg-green-600 text-white text-2xl font-bold py-4 px-12 rounded-full shadow-lg transform transition active:scale-95 border-b-8 border-green-700">
+            START! 🚀
+        </button>
+    </div>
+
+    <!-- Main Game UI -->
+    <div id="game-ui" class="relative w-full h-full hidden">
+        
+        <!-- Camera View -->
+        <video id="webcam" class="absolute inset-0 w-full h-full object-cover z-0" playsinline muted autoplay></video>
+        
+        <!-- AR Overlay Canvas -->
+        <canvas id="canvas" class="absolute inset-0 w-full h-full z-10 pointer-events-none"></canvas>
+
+        <!-- HUD: Top Bar -->
+        <div class="absolute top-0 left-0 w-full p-4 z-20 flex justify-between items-start pointer-events-none">
+            <div class="bg-white/90 backdrop-blur-sm rounded-2xl p-3 shadow-xl border-4 border-indigo-200">
+                <div class="text-xs font-bold text-indigo-500 uppercase">Punkty</div>
+                <div id="score" class="text-4xl font-black text-indigo-700 leading-none">0</div>
+            </div>
+            
+            <div id="status-badge" class="bg-yellow-400 text-yellow-900 px-4 py-2 rounded-full font-bold shadow-lg animate-pulse">
+                🔍 Szukam...
+            </div>
+        </div>
+
+        <!-- HUD: Bottom Action Area -->
+        <div class="absolute bottom-0 left-0 w-full p-6 z-20 flex flex-col items-center gap-4">
+            
+            <!-- Target Hint -->
+            <div id="message-box" class="bg-white/95 backdrop-blur rounded-2xl p-4 shadow-xl border-b-4 border-indigo-200 w-full max-w-md text-center transform transition-all duration-300 translate-y-20 opacity-0">
+                <p id="message-text" class="text-2xl font-bold text-gray-800">Znajdź butelkę!</p>
+            </div>
+
+            <!-- Action Button -->
+            <button id="action-btn" class="hidden w-full max-w-xs bg-green-500 hover:bg-green-600 text-white text-3xl font-black py-6 rounded-3xl shadow-[0_8px_0_rgb(21,128,61)] active:shadow-none active:translate-y-2 transition-all border-4 border-green-400 animate-bounce">
+                ZROBIONE! ✅
+            </button>
+        </div>
+    </div>
+
+    <!-- Audio Elements -->
+    <!-- We will generate beeps/success sounds via Web Audio API or use small base64 strings in JS to avoid external assets dependency issues -->
+
+    <script src="app.js"></script>
+    <script>
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('Service Worker registered', reg))
+                .catch(err => console.log('Service Worker failed', err));
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+Działaj jako Senior Frontend Developer oraz Ekspert Psychologii UX (specjalizacja: ADHD i grywalizacja). Twoim zadaniem jest napisanie kompletnego, nowoczesnego kodu dla aplikacji webowej typu PWA (Progressive Web App) o nazwie "SingleStep Kids".
+
+CEL APLIKACJI: Aplikacja ma pomagać dzieciom w sprzątaniu pokoju poprzez zamianę tego procesu w grę "poszukiwania skarbów". Wykorzystuje kamerę telefonu i lokalną sztuczną inteligencję (Computer Vision), aby rozpoznawać przedmioty leżące na podłodze (np. butelki, kubki, plecaki) i nagradzać dziecko za ich odnalezienie/posprzątanie.
+
+WYMAGANIA TECHNICZNE (STACK 2025):
+
+Struktura: Single Page Application (SPA) w jednym pliku index.html (dla łatwego prototypowania) lub podział na index.html / style.css / app.js.
+
+Framework UI: TailwindCSS (zaimportowany przez CDN) dla nowoczesnego, responsywnego wyglądu.
+
+Silnik AI: TensorFlow.js z modelem COCO-SSD (ładowany przez CDN). Musi działać całkowicie lokalnie w przeglądarce (Client-side), bez wysyłania obrazu na serwer (Privacy First).
+
+Audio: Web Speech API do syntezy mowy (aplikacja ma "mówić" do dziecka) oraz Web Audio API do efektów dźwiękowych.
+
+Animacje: Biblioteka 'canvas-confetti' do nagradzania sukcesów.
+
+SCENARIUSZ UX I LOGIKA DZIAŁANIA (ZERO UI): Aplikacja ma minimalny interfejs. Głównym widokiem jest obraz z kamery.
+
+Stan inicjalizacji: Prośba o dostęp do kamery. Ładowanie modelu AI. Wyświetlenie animacji ładowania ("Uzbrajanie magicznej różdżki...").
+
+Pętla Gry (The Game Loop):
+
+Aplikacja analizuje obraz z kamery w czasie rzeczywistym (np. co 500ms, aby oszczędzać baterię).
+
+AI szuka obiektów z listy "bałaganu" (np. 'bottle', 'cup', 'book', 'backpack', 'teddy bear').
+
+Jeśli obiekt zostanie wykryty z pewnością > 60%: a) Rysuje kolorową ramkę wokół obiektu na ekranie (AR Overlay). b) Syntezator mowy mówi: "Widzę butelkę! Szybko, zanieś ją do kuchni!". c) Pojawia się duży przycisk "ZROBIONE".
+
+System Nagród (Dopamine Loop):
+
+Po kliknięciu "ZROBIONE" (lub zniknięciu obiektu z kadru):
+
+Ekran wybucha konfetti.
+
+Odtwarza się dźwięk sukcesu (np. fanfary).
+
+Licznik punktów rośnie.
+
+Aplikacja automatycznie szuka kolejnego przedmiotu ("Szukam kolejnego celu...").
+
+WYMAGANIA SZCZEGÓŁOWE KODU:
+
+Obsłuż błędy (brak dostępu do kamery, brak obsługi Speech API).
+
+Zastosuj navigator.mediaDevices.getUserMedia z facingMode: 'environment' (tylna kamera).
+
+Kod musi być czysty, z komentarzami wyjaśniającymi logikę AI.
+
+Stylistyka: Jasna, kolorowa, przyjazna dzieciom (duże fonty, zaokrąglone rogi, wysoki kontrast).
+
+Proszę, wygeneruj kompletny kod aplikacji gotowy do uruchomienia.
+
+Analiza Techniczna i Logistyczna Rozwiązania
+Poniżej przedstawiam szczegółowe uzasadnienie użytych w prompcie technologii, które gwarantują sukces tego projektu w realiach 2025 roku.
+
+1. Architektura "Privacy-First" (Lokalne AI)
+W prompcie wymusiłem użycie TensorFlow.js i modelu COCO-SSD. Jest to kluczowe z dwóch powodów:
+
+Bezpieczeństwo dzieci: Żaden obraz z pokoju dziecka nie jest wysyłany do chmury (Cloud). Cała analiza obrazu odbywa się na procesorze telefonu użytkownika. Jest to zgodne z trendem "On-Device AI", który buduje zaufanie rodziców.
+
+Działanie Offline: Aplikacja zadziała nawet w piwnicy czy na wakacjach bez dostępu do Wi-Fi, co jest istotne dla rozwiązań mobilnych.
+
+2. Psychologia Interfejsu (Zero UI & Gamifikacja)
+Koncepcja opiera się na eliminacji obciążenia poznawczego (Cognitive Load).
+
+Zero UI: Dziecko nie musi nawigować po menu. Interfejsem jest rzeczywistość widziana przez kamerę. To redukuje barierę wejścia dla dzieci z zaburzeniami uwagi.
+
+Chunking (Dzielenie zadań): Zamiast polecenia "posprzątaj pokój" (co jest abstrakcyjne i przerażające dla mózgu ADHD), aplikacja wydaje mikro-polecenie: "Znajdź butelkę". To technika behawioralna redukująca lęk przed rozpoczęciem zadania.
+
+Natychmiastowa gratyfikacja: Użycie canvas-confetti i dźwięków po każdym przedmiocie stymuluje układ nagrody (dopaminę) natychmiast, a nie po zakończeniu całego sprzątania.
+
+3. Aspekty Logistyczne (PWA)
+Zalecam technologię PWA (Progressive Web App) :
+
+Brak App Store: Nie musisz przechodzić przez długi i kosztowny proces weryfikacji Apple/Google. Aplikację udostępniasz linkiem.
+
+Uniwersalność: Działa na starym tablecie z Androidem i nowym iPhone.
+
+Koszt: Drastycznie niższy koszt produkcji i utrzymania w porównaniu do natywnych aplikacji (Flutter/Swift).

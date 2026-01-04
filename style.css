@@ -1,0 +1,25 @@
+body {
+    overscroll-behavior: none;
+}
+
+/* Custom Utilities if needed */
+.touch-none {
+    touch-action: none;
+}
+
+/* Make sure video covers screen correctly on mobile */
+#webcam {
+    transform: scaleX(-1); /* Mirror effect is usually better for selfie, but for rear camera we might NOT want this. Let's decide in JS based on camera facing mode. For now default no mirror for rear. */
+    transform: scaleX(1); 
+}
+
+/* Pulse animation for detection box */
+@keyframes pulse-border {
+    0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(79, 70, 229, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+}
+
+.detection-box {
+    animation: pulse-border 2s infinite;
+}
