@@ -2,7 +2,7 @@
 // Senior Mobile Web Developer Edition
 
 // --- Constants ---
-const MIN_CONFIDENCE = 0.4; // Jeszcze niższy próg (40%) - łatwiej coś znaleźć
+const MIN_CONFIDENCE = 0.20; // DRASTYCZNIE OBNIŻONY PRÓG (20%) - Akceptujemy prawie wszystko
 const DETECTION_INTERVAL = 200; 
 const MODEL_TIMEOUT = 10000;
 
@@ -24,8 +24,8 @@ const MODEL_CONFIG = {
     base: 'mobilenet_v2', 
     modelUrl: undefined // default
 };
-// Zwiększamy rozdzielczość dla AI, aby widziało detale (z 0.5 na 0.8)
-const AI_RESOLUTION_FACTOR = 0.8; 
+// MAX RESOLUTION (1.0) - Żadnego skalowania w dół. AI musi widzieć każdy piksel.
+const AI_RESOLUTION_FACTOR = 1.0; 
 
 // --- State ---
 let model = null;
@@ -417,15 +417,30 @@ async function detectLoop() {
         // Jednak `cocoSsd` robi to wewnętrznie. Największy zysk to użycie `lite_mobilenet_v2` (zrobione wyżej).
         
         // Wykrywanie obiektów
-        const predictions = await model.detect(video, undefined, 0.3); // Pre-filter na poziomie modelu (30%)
+        // Zmieniono minScore na 0.1 (10%), żeby model wypluł wszystko co widzi
+        const predictions = await model.detect(video, undefined, 0.1); 
         
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // DEBUG: Pokaż co widzi AI (wszystko > 30%)
+        // DEBUG: Pokaż co widzi AI (wszystko > 10%)
         const debugOverlay = document.getElementById('debug-overlay');
         if (debugOverlay) {
              const allSeen = predictions.map(p => `${p.class} (${Math.round(p.score*100)}%)`).join(', ');
              debugOverlay.innerHTML += `<br>AI Sees: ${allSeen || 'Nothing'}`;
+        }
+
+        // --- DYNAMIC FEEDBACK (Smart Hint) ---
+        // Jeśli AI widzi coś z pewnością > 40%, ale to nie jest cel, powiedz o tym.
+        if (predictions.length > 0) {
+            const top = predictions[0];
+            if (top.score > 0.4 && !TARGET_OBJECTS.includes(top.class) && !foundObject) {
+                 statusBadge.innerText = `🤔 Widzę: ${translateClass(top.class)}?`;
+                 statusBadge.className = "bg-gray-500 text-white px-4 py-2 rounded-full font-bold shadow-lg opacity-80";
+            }
+        } else if (!foundObject) {
+            // Reset status if nothing seen and not locked on object
+             statusBadge.innerText = "🔍 Szukam...";
+             statusBadge.className = "bg-yellow-400 text-yellow-900 px-4 py-2 rounded-full font-bold shadow-lg animate-pulse";
         }
 
         const relevantPredictions = predictions.filter(p => 
@@ -536,7 +551,7 @@ function translateClass(className) {
         'bottle': 'butelka', 'cup': 'kubek', 'wine glass': 'kieliszek', 
         'bowl': 'miska', 'spoon': 'łyżka', 'fork': 'widelec', 'knife': 'nóż',
         'backpack': 'plecak', 'handbag': 'torebka', 'suitcase': 'walizka', 'umbrella': 'parasol',
-        'book': 'książka', 'teddy bear': 'miś', 'sports ball': 'piłka', 'frisbee': 'frisbee',
+        'book': 'książka', 'teddy bear': 'miś', 'sports ball': 'piłka', 'frisbee': 'frisbee', 'skis': 'narty', 'snowboard': 'snowboard',
         'remote': 'pilot', 'cell phone': 'telefon', 'keyboard': 'klawiatura', 'mouse': 'myszka', 'laptop': 'laptop', 'tv': 'telewizor',
         'banana': 'banan', 'apple': 'jabłko', 'orange': 'pomarańcza', 'broccoli': 'brokuł', 'carrot': 'marchewka', 
         'hot dog': 'hot dog', 'pizza': 'pizza', 'donut': 'pączek', 'cake': 'ciasto', 'sandwich': 'kanapka',
