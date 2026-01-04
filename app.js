@@ -24,6 +24,7 @@ let deferredPrompt; // PWA Install Prompt
 
 // --- UI Elements ---
 const loadingScreen = document.getElementById('loading-screen');
+const loadingText = document.getElementById('loading-text'); // FIX: Added missing reference
 const loadingBar = document.getElementById('loading-bar');
 const permissionScreen = document.getElementById('permission-screen');
 const startBtn = document.getElementById('start-btn');
@@ -269,30 +270,27 @@ async function loadModelWithTimeout() {
 
 // Start Button Handler
 startBtn.addEventListener('click', async () => {
+    console.log('App started - User clicked Start');
+    
     // User gesture starts here
-    permissionScreen.classList.add('hidden');
-    loadingScreen.classList.remove('hidden');
-    loadingText.innerText = "Uruchamiam kamerę..."; // Zmiana tekstu
-    updateLoadingProgress(30);
-
-    // --- STEP 1: CAMERA ---
-    log("Step 1: Starting Camera...");
     try {
+        permissionScreen.classList.add('hidden');
+        loadingScreen.classList.remove('hidden');
+        
+        // Safe check for loadingText
+        if(loadingText) loadingText.innerText = "Uruchamiam kamerę..."; 
+        updateLoadingProgress(30);
+
+        // --- STEP 1: CAMERA ---
+        log("Step 1: Starting Camera...");
         await startCamera();
         log("Step 1: Camera OK ✅");
         updateLoadingProgress(60);
-    } catch (err) {
-        console.error("Camera Start Error", err);
-        showError("Błąd kamery: " + err.message);
-        permissionScreen.classList.remove('hidden');
-        loadingScreen.classList.add('hidden');
-        return; // Stop here
-    }
 
-    // --- STEP 2: MODEL ---
-    log("Step 2: Waiting for AI Model...");
-    loadingText.innerText = "Budzę AI...";
-    try {
+        // --- STEP 2: MODEL ---
+        log("Step 2: Waiting for AI Model...");
+        if(loadingText) loadingText.innerText = "Budzę AI...";
+        
         if (!model) {
             log("Model not ready yet, waiting...");
             // If background loading hasn't finished, await it now
@@ -306,6 +304,7 @@ startBtn.addEventListener('click', async () => {
         
         if (!model) throw new Error("AI Model failed to load");
         
+        console.log('Model loaded');
         log("Step 2: AI Model OK ✅");
         updateLoadingProgress(100);
 
@@ -318,12 +317,23 @@ startBtn.addEventListener('click', async () => {
         }, 500);
 
     } catch (err) {
-        console.error("Model Wait Error", err);
-        showError("Błąd AI: " + err.message);
-        // Fallback: Start game without AI if critical? Or just show error?
-        // Let's show error for now as AI is core.
-        permissionScreen.classList.remove('hidden');
-        loadingScreen.classList.add('hidden');
+        console.error("Critical Start Error:", err);
+        
+        // Show error on screen (Critical Requirement)
+        if(loadingText) {
+            loadingText.innerText = "BŁĄD: " + err.message;
+            loadingText.classList.add('text-red-500', 'font-bold');
+        } else {
+            alert("BŁĄD KRYTYCZNY: " + err.message);
+        }
+
+        showError("Błąd startu: " + err.message);
+        
+        // Fallback option after delay
+        setTimeout(() => {
+             permissionScreen.classList.remove('hidden');
+             loadingScreen.classList.add('hidden');
+        }, 3000);
     }
 });
 
