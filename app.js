@@ -70,7 +70,13 @@ startBtn.addEventListener('click', async () => {
         
     } catch (err) {
         console.error('Camera error', err);
-        alert('Nie udało się uruchomić kamery. Upewnij się, że dałeś uprawnienia.');
+        let msg = 'Nie udało się uruchomić kamery.';
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+            msg += ' Wymagane jest bezpieczne połączenie HTTPS (lub localhost).';
+        } else {
+            msg += ' Sprawdź uprawnienia w przeglądarce.';
+        }
+        alert(msg);
         permissionScreen.classList.remove('hidden');
     }
 });
@@ -81,24 +87,64 @@ async function setupCamera() {
     canvas = document.getElementById('canvas');
     ctx = canvas.getContext('2d');
 
-    const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: {
-            facingMode: 'environment', // Rear camera preferred
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-        }
-    });
+    // Check if getUserMedia is supported
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Browser API navigator.mediaDevices.getUserMedia not available');
+    }
 
-    video.srcObject = stream;
+    try {
+        // First try: preferred settings (Rear camera)
+        const stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+                facingMode: 'environment'
+            }
+        });
+        video.srcObject = stream;
+    } catch (e) {
+        console.warn("Camera init failed with environment facingMode, trying fallback...", e);
+        showDebugError(`Błąd kamery tylnej: ${e.name} - ${e.message}. Próbuję innej...`);
+        
+        try {
+            // Second try: any camera
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: false,
+                video: true
+            });
+            video.srcObject = stream;
+        } catch (e2) {
+            showDebugError(`Krytyczny błąd kamery: ${e2.name} - ${e2.message}`);
+            throw e2;
+        }
+    }
     
     return new Promise((resolve) => {
         video.onloadedmetadata = () => {
-            video.play();
-            resizeCanvas();
-            resolve();
+            video.play().then(() => {
+                resizeCanvas();
+                resolve();
+            }).catch(e => {
+                 showDebugError(`Błąd odtwarzania wideo: ${e.name} - ${e.message}`);
+            });
         };
     });
+}
+
+function showDebugError(msg) {
+    // Optional: display error on screen for mobile debugging
+    const errDiv = document.createElement('div');
+    errDiv.style.position = 'fixed';
+    errDiv.style.bottom = '0';
+    errDiv.style.left = '0';
+    errDiv.style.width = '100%';
+    errDiv.style.backgroundColor = 'rgba(255,0,0,0.8)';
+    errDiv.style.color = 'white';
+    errDiv.style.padding = '10px';
+    errDiv.style.zIndex = '9999';
+    errDiv.style.fontSize = '12px';
+    errDiv.innerText = msg;
+    document.body.appendChild(errDiv);
+    setTimeout(() => errDiv.remove(), 10000);
 }
 
 function resizeCanvas() {
